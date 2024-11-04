@@ -1,0 +1,31 @@
+.product-item img {
+    zoom: 0.5;
+}
+h1 {
+    text-align: center;
+}
+.products-grid {
+    max-width: 1200px;
+    margin: auto;
+}
+.product-item {
+    border: 1px solid #bba3a3;
+    padding: 20px;
+}
+button.add-to-cart-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #000;
+    color: #fff;
+    text-transform: capitalize;
+}
+.go-to-cart {
+    text-align: center;
+    margin-top: 20px;
+}
+.go-to-cart button {
+    background-color: #000;
+    color: #fff;
+    padding: 10px 20px;
+    text-transform: capitalize;
+}
