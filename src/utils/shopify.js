@@ -5,12 +5,12 @@ export async function shopifyFetch({query, variables}) {
     try {
         // Log request để debug
         console.log('Shopify Request:', {
-            url: `https://${shopifyDomain}/api/2024-07/graphql.json`,
+            url: `https://${shopifyDomain}/api/2024-01/graphql.json`,
             variables
         });
 
         const response = await fetch(
-            `https://${shopifyDomain}/api/2024-07/graphql.json`,
+            `https://${shopifyDomain}/api/2024-01/graphql.json`,
             {
                 method: 'POST',
                 headers: {

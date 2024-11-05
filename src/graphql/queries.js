@@ -29,3 +29,4 @@ export const PRODUCTS_QUERY = `
     }
   }
 `; 
+// products(first: 10) là một phần của query để lấy 10 sản phẩm từ Shopify API

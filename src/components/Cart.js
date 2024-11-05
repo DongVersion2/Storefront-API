@@ -1,22 +1,31 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 
 const Cart = () => {
-    // Lấy các functions và data từ CartContext
-  const {
-     cartItems,
-     removeFromCart,
-     updateQuantity,
-     createCheckout,
-     isCheckingOut
+    const navigate = useNavigate();
+    const location = useLocation();
+    const {
+        cartItems,
+        removeFromCart,
+        updateQuantity,
+        createCheckout,
+        isCheckingOut
     } = useCart();
 
-  const calculateTotal = () => {
-    return cartItems.reduce((total, item) => {
-      return total + (parseFloat(item.price) * item.quantity);
-    }, 0);
-  };
+    useEffect(() => {
+        const searchParams = new URLSearchParams(location.search);
+        if (searchParams.get('checkout_completed')) {
+            navigate('/', { replace: true });
+            window.location.reload();
+        }
+    }, [location, navigate]);
+
+    const calculateTotal = () => {
+        return cartItems.reduce((total, item) => {
+            return total + (parseFloat(item.price) * item.quantity);
+        }, 0);
+    };
 
     //xử lí checkout
     const handleCheckout = async () => {
@@ -26,6 +35,7 @@ const Cart = () => {
         }
         
         try {
+            localStorage.setItem('returnToUrl', window.location.pathname);
             await createCheckout();
         } catch (error) {
             console.error('Lỗi khi tạo checkout:', error);

@@ -8,6 +8,13 @@ const CartContext = createContext();
 export function CartProvider({ children }) {
     //khởi tạo state để lưu giỏ hàng, lấy dữ liệu từ local storage nếu có
     const [cartItems, setCartItems] = useState(() => {
+                // Kiểm tra checkout_completed ngay khi khởi tạo state
+                const checkoutCompleted = localStorage.getItem('checkout_completed');
+                if (checkoutCompleted) {
+                    localStorage.removeItem('checkout_completed');
+                    localStorage.removeItem('cart');
+                    return [];
+                }
         const savedCart = localStorage.getItem('cart');
         return savedCart ? JSON.parse(savedCart) : [];
     });
@@ -15,6 +22,16 @@ export function CartProvider({ children }) {
     const [isCheckingOut, setCheckingOut] = useState(false);
     // useEffect sẽ chạy mỗi khi cartItems thay đổi
     useEffect(() => {
+        //kiểm tra url để xem người dùng có vừa quay lại từ checkout không
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('checkout_completed')) {
+            //nếu có thì xóa giỏ hàng và set lại cartItems
+            localStorage.removeItem('cart');
+            localStorage.removeItem('checkout_completed');
+            setCartItems([]);
+            return;
+        }
+
         localStorage.setItem('cart', JSON.stringify(cartItems));
     }, [cartItems]);
     //hàm thêm sản phẩm vào giỏ hàng
@@ -27,34 +44,37 @@ export function CartProvider({ children }) {
             return;
         }
 
-        setCartItems(prevItems => {
-            //kiểm tra xem sản phẩm đã tồn tại trong giỏ hàng chưa
-            const existingItem = prevItems.find(item => item.id === product.id);
-            //nếu tồn tại thì cập nhật số lượng
-            if (existingItem) {
-                return prevItems.map(item =>
-                    item.id === product.id
-                        ? { ...item, quantity: item.quantity + quantity }
-                        : item
-                );
-            }
+        try {
+            setCartItems(prevItems => {
+                const existingItem = prevItems.find(item => item.id === product.id);
+                if (existingItem) {
+                    return prevItems.map(item =>
+                        item.id === product.id
+                            ? { ...item, quantity: item.quantity + quantity }
+                            : item
+                    );
+                }
 
-            const variant = product.variants.edges[0].node;
-            const variantId = variant.id;
+                const variant = product.variants.edges[0].node;
+                const variantId = variant.id;
 
-            console.log('Selected variant:', variant);
-            console.log('Variant ID:', variantId);
+                const newItem = {
+                    id: product.id,
+                    variantId: variantId,
+                    title: product.title,
+                    price: variant.priceV2.amount,
+                    image: product.images?.edges[0]?.node.url,
+                    quantity: quantity
+                };
 
-            return [...prevItems, {
-                id: product.id,
-                variantId: variantId,
-                title: product.title,
-                price: variant.priceV2.amount,
-                image: product.images?.edges[0]?.node.url,
-                quantity: quantity
-            }];
-        });
-        alert('Đã thêm sản phẩm vào giỏ hàng!');
+                console.log('Adding new item:', newItem);
+                return [...prevItems, newItem];
+            });
+            alert('Đã thêm sản phẩm vào giỏ hàng!');
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            alert('Có lỗi xảy ra khi thêm vào giỏ hàng');
+        }
     };
     //hàm xóa sản phẩm khỏi giỏ hàng
     const removeFromCart = (productId) => {
@@ -76,13 +96,12 @@ export function CartProvider({ children }) {
             //bật loading
             setCheckingOut(true);
 
-            // Kiểm tra cartItems có tồn tại không
-        if (!cartItems || cartItems.length === 0) {
-            throw new Error('Giỏ hàng trống');
-        }
+            if (!cartItems || cartItems.length === 0) {
+                throw new Error('Giỏ hàng trống');
+            }
 
             //chuyển đổi giỏ hàng sang format shopify cần
-            console.log('Cart Items before checkout:', cartItems);
+            // console.log('Cart Items before checkout:', cartItems);
             const lineItems = cartItems.map(item => {
 
                 if (!item || !item.variantId) {
@@ -100,7 +119,6 @@ export function CartProvider({ children }) {
                     quantity: parseInt(item.quantity)
                 };
             });
-
             console.log('Line Items for checkout:', lineItems);
 
             const checkoutInput = {
@@ -116,7 +134,6 @@ export function CartProvider({ children }) {
                 query: CREATE_CHECKOUT_MUTATION,
                 variables: checkoutInput
             });
-
             console.log('Checkout response:', data);
 
             if (!data || !data.checkoutCreate) {
@@ -134,9 +151,16 @@ export function CartProvider({ children }) {
                 throw new Error('No checkout URL received');
             }
 
-            setCartItems([]);
-            localStorage.removeItem('cart');
-           //chuyển hướng đến trang checkout của shopify
+            // nếu như muốn thanh toán xong mất giỏ hàng thì mở đây
+            // localStorage.setItem('checkout_completed', 'true');
+            // setCartItems([]);
+            // localStorage.removeItem('cart');
+            // // Thêm parameter vào URL checkout
+            // const checkoutUrlWithParam = `${checkoutUrl}${checkoutUrl.includes('?') ? '&' : '?'}return_to=${window.location.origin}?checkout_completed=true`;
+            // window.location.href = checkoutUrlWithParam;
+
+
+            // Chuyển hướng tới trang checkout
             window.location.href = checkoutUrl;
         } catch (error) {
             console.error('Detailed checkout error:', error);
@@ -168,4 +192,4 @@ export function useCart() {
 // useState quản lý dữ liệu giỏ hàng
 // useEffect đồng bộ giỏ hàng với localStorage
 // Các hàm xử lý giỏ hàng (thêm, xóa, cập nhật)
-// Hook useCart giúp các component dễ dàn
+// Hook useCart giúp các component dễ dàng
